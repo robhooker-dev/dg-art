@@ -374,6 +374,8 @@ function DetailModal({ painting: p, onClose, onEnquire }) {
 
 // ─── Enquire Modal ────────────────────────────────────────────────────────────
 
+const ENQUIRE_FORM_ID = 'YOUR_ENQUIRE_FORM_ID' // replace with your Formspree form ID
+
 function EnquireModal({ painting: p, onClose }) {
   const [form, setForm] = useState({
     name: '',
@@ -381,9 +383,40 @@ function EnquireModal({ painting: p, onClose }) {
     message: `I am interested in "${p.title}" and would like more information.`,
   })
   const [sent, setSent] = useState(false)
+  const [sending, setSending] = useState(false)
+  const [error, setError] = useState(null)
+  const [errors, setErrors] = useState({})
   const [btnHover, setBtnHover] = useState(false)
 
   const update = key => e => setForm({ ...form, [key]: e.target.value })
+
+  const validate = () => {
+    const e = {}
+    if (!form.name.trim()) e.name = 'Required'
+    if (!form.email.trim()) e.email = 'Required'
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) e.email = 'Invalid email'
+    return e
+  }
+
+  const handleSubmit = async () => {
+    const e = validate()
+    if (Object.keys(e).length) { setErrors(e); return }
+    setSending(true)
+    setError(null)
+    try {
+      const res = await fetch(`https://formspree.io/f/${ENQUIRE_FORM_ID}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ ...form, painting: p.title }),
+      })
+      if (!res.ok) throw new Error()
+      setSent(true)
+    } catch {
+      setError('Something went wrong. Please try again.')
+    } finally {
+      setSending(false)
+    }
+  }
 
   if (sent) {
     return (
@@ -421,8 +454,9 @@ function EnquireModal({ painting: p, onClose }) {
               value={form[key]}
               onChange={update(key)}
               placeholder={placeholder}
-              style={S.fieldInput}
+              style={{ ...S.fieldInput, borderBottomColor: errors[key] ? '#c0392b' : 'rgba(28,27,25,0.18)' }}
             />
+            {errors[key] && <p style={{ fontSize: '0.65rem', color: '#c0392b', marginTop: '0.3rem' }}>{errors[key]}</p>}
           </div>
         ))}
 
@@ -436,17 +470,21 @@ function EnquireModal({ painting: p, onClose }) {
           />
         </div>
 
+        {error && <p style={{ fontSize: '0.72rem', color: '#c0392b', marginBottom: '1rem' }}>{error}</p>}
+
         <button
-          onClick={() => setSent(true)}
+          onClick={handleSubmit}
+          disabled={sending}
           onMouseEnter={() => setBtnHover(true)}
           onMouseLeave={() => setBtnHover(false)}
           style={{
             ...S.btn,
-            background: btnHover ? '#1c1b19' : 'transparent',
-            color: btnHover ? '#f5f1eb' : '#1c1b19',
+            background: btnHover && !sending ? '#1c1b19' : 'transparent',
+            color: btnHover && !sending ? '#f5f1eb' : '#1c1b19',
+            opacity: sending ? 0.6 : 1,
           }}
         >
-          Send enquiry
+          {sending ? 'Sending…' : 'Send enquiry'}
         </button>
       </div>
     </ModalOverlay>
@@ -486,12 +524,46 @@ function About() {
 
 // ─── Contact ──────────────────────────────────────────────────────────────────
 
+const CONTACT_FORM_ID = 'YOUR_CONTACT_FORM_ID' // replace with your Formspree form ID
+
 function Contact() {
   const [form, setForm] = useState({ name: '', email: '', message: '' })
   const [sent, setSent] = useState(false)
+  const [sending, setSending] = useState(false)
+  const [error, setError] = useState(null)
+  const [errors, setErrors] = useState({})
   const [btnHover, setBtnHover] = useState(false)
 
   const update = key => e => setForm({ ...form, [key]: e.target.value })
+
+  const validate = () => {
+    const e = {}
+    if (!form.name.trim()) e.name = 'Required'
+    if (!form.email.trim()) e.email = 'Required'
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) e.email = 'Invalid email'
+    if (!form.message.trim()) e.message = 'Required'
+    return e
+  }
+
+  const handleSubmit = async () => {
+    const e = validate()
+    if (Object.keys(e).length) { setErrors(e); return }
+    setSending(true)
+    setError(null)
+    try {
+      const res = await fetch(`https://formspree.io/f/${CONTACT_FORM_ID}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify(form),
+      })
+      if (!res.ok) throw new Error()
+      setSent(true)
+    } catch {
+      setError('Something went wrong. Please try again.')
+    } finally {
+      setSending(false)
+    }
+  }
 
   if (sent) {
     return (
@@ -524,8 +596,9 @@ function Contact() {
               value={form[key]}
               onChange={update(key)}
               placeholder={placeholder}
-              style={S.fieldInput}
+              style={{ ...S.fieldInput, borderBottomColor: errors[key] ? '#c0392b' : 'rgba(28,27,25,0.18)' }}
             />
+            {errors[key] && <p style={{ fontSize: '0.65rem', color: '#c0392b', marginTop: '0.3rem' }}>{errors[key]}</p>}
           </div>
         ))}
         <div style={{ marginBottom: '2.5rem' }}>
@@ -535,20 +608,26 @@ function Contact() {
             onChange={update('message')}
             rows={5}
             placeholder="Your message..."
-            style={{ ...S.fieldInput, resize: 'vertical' }}
+            style={{ ...S.fieldInput, resize: 'vertical', borderBottomColor: errors.message ? '#c0392b' : 'rgba(28,27,25,0.18)' }}
           />
+          {errors.message && <p style={{ fontSize: '0.65rem', color: '#c0392b', marginTop: '0.3rem' }}>{errors.message}</p>}
         </div>
+
+        {error && <p style={{ fontSize: '0.72rem', color: '#c0392b', marginBottom: '1rem' }}>{error}</p>}
+
         <button
-          onClick={() => setSent(true)}
+          onClick={handleSubmit}
+          disabled={sending}
           onMouseEnter={() => setBtnHover(true)}
           onMouseLeave={() => setBtnHover(false)}
           style={{
             ...S.btn,
-            background: btnHover ? '#1c1b19' : 'transparent',
-            color: btnHover ? '#f5f1eb' : '#1c1b19',
+            background: btnHover && !sending ? '#1c1b19' : 'transparent',
+            color: btnHover && !sending ? '#f5f1eb' : '#1c1b19',
+            opacity: sending ? 0.6 : 1,
           }}
         >
-          Send message
+          {sending ? 'Sending…' : 'Send message'}
         </button>
       </div>
     </div>
